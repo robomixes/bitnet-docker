@@ -125,18 +125,16 @@ You can expect around 3-6 tokens per second with the 2B model on a Pi 5, which i
 
 Don't want to install compilers, Conda, and build tools? I packaged the entire BitNet setup into a portable Docker container. One command and you're running.
 
-### Download the Dockerfile
+### Download the Pre-Built Image
 
-You can grab the Docker files from my repository:
+You can grab the pre-built Docker image:
 
-- [Dockerfile](https://github.com/YOUR_USERNAME/bitnet-docker/blob/main/Dockerfile)
-- [docker-compose.yml](https://github.com/YOUR_USERNAME/bitnet-docker/blob/main/docker-compose.yml)
-- [docker-entrypoint.sh](https://github.com/YOUR_USERNAME/bitnet-docker/blob/main/docker-entrypoint.sh)
+- [bitnet-portable.tar](https://github.com/robomixes/bitnet-docker/releases/download/latest/bitnet-portable.tar) (pre-built image, ~1.06 GB)
 
-Or clone the full repo:
+Or clone the full repo and build from source:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/bitnet-docker.git
+git clone https://github.com/robomixes/bitnet-docker.git
 cd bitnet-docker
 ```
 
