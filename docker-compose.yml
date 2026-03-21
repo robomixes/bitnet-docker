@@ -1,0 +1,28 @@
+services:
+  bitnet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bitnet-llm:2b-4t
+    container_name: bitnet-server
+    ports:
+      - "8080:8080"
+    environment:
+      - THREADS=4
+      - CTX_SIZE=2048
+      - N_PREDICT=4096
+      - TEMPERATURE=0.8
+    command: ["server"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
