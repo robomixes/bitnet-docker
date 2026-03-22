@@ -6,12 +6,18 @@ FROM ubuntu:22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    clang \
     cmake \
     build-essential \
     python3 \
     python3-pip \
     git \
+    wget \
+    software-properties-common \
+    gnupg \
+    && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
+    && echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" > /etc/apt/sources.list.d/llvm.list \
+    && apt-get update && apt-get install -y --no-install-recommends clang-18 \
+    && ln -s /usr/bin/clang-18 /usr/bin/clang && ln -s /usr/bin/clang++-18 /usr/bin/clang++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
