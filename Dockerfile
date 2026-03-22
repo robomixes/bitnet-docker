@@ -28,6 +28,9 @@ RUN git clone --recursive https://github.com/microsoft/BitNet.git .
 # Install gguf Python package (needed for codegen)
 RUN pip3 install --no-cache-dir 3rdparty/llama.cpp/gguf-py
 
+# Patch const-correctness bug in ggml-bitnet-mad.cpp (line 811)
+RUN sed -i 's/int8_t \* y_col = y + col \* by;/const int8_t * y_col = y + col * by;/' src/ggml-bitnet-mad.cpp
+
 # Generate x86_64 TL2 kernels for BitNet-b1.58-2B-4T
 RUN python3 utils/codegen_tl2.py \
     --model bitnet_b1_58-3B \
