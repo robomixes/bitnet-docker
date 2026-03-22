@@ -45,15 +45,10 @@ RUN cmake -B build \
     -DCMAKE_CXX_COMPILER=clang++ \
     && cmake --build build --config Release
 
-# Download the model
+# Download the pre-built GGUF model directly (no conversion needed)
 RUN pip3 install --no-cache-dir huggingface_hub && \
-    python3 -c "from huggingface_hub import snapshot_download; snapshot_download('microsoft/BitNet-b1.58-2B-4T', local_dir='models/BitNet-b1.58-2B-4T')"
-
-# Convert model to GGUF format
-RUN python3 -m pip install --no-cache-dir -r requirements.txt && \
-    python3 utils/convert-hf-to-gguf-bitnet.py models/BitNet-b1.58-2B-4T --outtype f32 && \
-    ./build/bin/llama-quantize models/BitNet-b1.58-2B-4T/ggml-model-f32.gguf \
-    models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf I2_S 1
+    mkdir -p models/BitNet-b1.58-2B-4T && \
+    python3 -c "from huggingface_hub import hf_hub_download; hf_hub_download('microsoft/BitNet-b1.58-2B-4T-gguf', filename='ggml-model-i2_s.gguf', local_dir='models/BitNet-b1.58-2B-4T')"
 
 # ============================================
 # Stage 2: Minimal runtime image
