@@ -1,156 +1,29 @@
-# Running Microsoft's BitNet Locally on Windows: A Hands-On Guide
+# BitNet Docker — Run Microsoft's 1-Bit LLM in One Command
 
-**The promise of running a large language model on your CPU with minimal resources — does it deliver?**
+A fully self-contained Docker setup for running [Microsoft's BitNet](https://github.com/microsoft/BitNet) locally. No compilers, no Python environments, no manual setup — just Docker.
+
+The container clones BitNet, compiles it from source, downloads the model, and packages everything into a portable image. One command to build, one command to run.
 
 ---
 
-## What is BitNet?
-
-BitNet is Microsoft's open-source framework for running 1-bit large language models (LLMs) on standard hardware. Unlike traditional models that use 16-bit or even 4-bit weights, BitNet uses **1.58-bit ternary weights** — meaning each weight is either -1, 0, or 1. This dramatically reduces memory usage and computation, allowing LLMs to run efficiently on CPUs without a GPU.
-
-The key idea is simple: by reducing the precision of model weights to their absolute minimum, you trade a bit of accuracy for massive gains in speed and efficiency.
-
-## Why Should You Care?
-
-If you've ever tried running a local LLM, you know the pain — high RAM usage, slow inference without a GPU, and models that barely fit on consumer hardware. BitNet changes the equation:
-
-- **~10x less memory** than a standard model of the same size
-- **55-82% less energy consumption** compared to full-precision models
-- **Fast CPU inference** using optimized ARM and x86 kernels
-- **100% offline** — no cloud, no API calls, no data leaving your machine
-
 ## Prerequisites
 
-Before getting started, you'll need the following installed on your Windows machine:
+Only one thing needed:
 
-- **Python 3.9+**
-- **Git**
-- **CMake** (>= 3.22)
-- **LLVM/Clang** (>= 18)
-- **Conda** (Miniconda is sufficient)
-- **Visual Studio 2022 Build Tools** with the C++ workload
+- [**Docker Desktop**](https://www.docker.com/products/docker-desktop/) installed and running
 
-A tip from my experience: after installing these tools, make sure they're all added to your system PATH. I ran into issues where Conda and Clang were installed but not recognized in the terminal. The fix was simple — add the install paths manually through Windows Environment Variables and restart the terminal.
-
-## Installation
-
-### Step 1: Clone the Repository
-
-```bash
-git clone --recursive https://github.com/microsoft/BitNet.git
-cd BitNet
-```
-
-### Step 2: Create a Conda Environment
-
-```bash
-conda create -n bitnet python=3.9 -y
-conda activate bitnet
-```
-
-### Step 3: Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4: Download a Model and Build
-
-```bash
-python setup_env.py --hf-repo microsoft/BitNet-b1.58-2B-4T -q i2_s
-```
-
-This downloads the **BitNet b1.58-2B-4T** model (around 1.1 GB) and compiles the inference engine. The build step uses Clang to compile optimized native code, so make sure your compiler is properly configured.
-
-## Running the Model
-
-### Single Prompt
-
-```bash
-python run_inference.py -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf -p "What is machine learning?" -n 200 -t 10
-```
-
-- `-p` sets your prompt
-- `-n` controls the max tokens to generate
-- `-t` sets the number of CPU threads (more threads = faster output)
-
-### Interactive Chat Mode
-
-For a conversational experience where you can ask multiple questions without retyping commands:
-
-```bash
-python run_inference.py -m models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf -cnv -t 10
-```
-
-This opens an interactive session where you can chat back and forth with the model.
-
-## What Can the 2B Model Actually Do?
-
-I tested the model with several tasks. Here's an honest assessment:
-
-### Basic Q&A — Works, But Inconsistent
-
-The model can answer general knowledge questions, but being only 2 billion parameters, it often goes off-topic or provides verbose, unfocused responses. For example, a simple "Hello!" prompt resulted in a lengthy explanation about polynomial derivatives. Not exactly what you'd expect.
-
-### Translation — Surprisingly Decent for Simple Phrases
-
-I tested English-to-Arabic translation, and it correctly translated "Hello, how are you today?" to "مرحبا، كيف حالك اليوم؟". However, don't expect it to handle complex or nuanced translations — the model was primarily trained on English data.
-
-### Complex Reasoning — Limited
-
-This is a 2B parameter model with 1.58-bit weights. It's not going to compete with GPT-4 or Claude on reasoning tasks. Set your expectations accordingly.
-
-## Available Models
-
-Microsoft currently offers two BitNet models:
-
-| Model | Parameters | RAM Usage | Quality |
-|-------|-----------|-----------|---------|
-| BitNet b1.58-2B-4T | 2.4 billion | ~1.1 GB | Basic |
-| BitNet b1.58-4B-4T | 4 billion | ~2.2 GB | Better |
-
-An important limitation: BitNet only supports models specifically trained with 1.58-bit ternary weights. You **cannot** load standard models like Llama 3, Mistral, or Phi into BitNet. It uses a specialized quantization format that is incompatible with regular GGUF models.
-
-## Can It Run on a Raspberry Pi?
-
-Yes — and this is arguably where BitNet shines the most. The Raspberry Pi 5 with its ARM CPU is a great match because:
-
-- BitNet's optimized kernels are designed for ARM architecture
-- The 2B model only needs ~1.1 GB of RAM (Pi 5 has 4-8 GB)
-- Low power consumption aligns perfectly with the Pi's design philosophy
-
-You can expect around 3-6 tokens per second with the 2B model on a Pi 5, which is usable for simple tasks.
-
-## Run BitNet with Docker (No Setup Required)
-
-Don't want to install compilers, Conda, and build tools? I packaged the entire BitNet setup into a portable Docker container. One command and you're running.
-
-### Download the Pre-Built Image
-
-You can grab the pre-built Docker image:
-
-- [bitnet-portable.tar](https://github.com/robomixes/bitnet-docker/releases/download/latest/bitnet-portable.tar) (pre-built image, ~1.06 GB)
-
-Or clone the full repo and build from source:
+## Quick Start
 
 ```bash
 git clone https://github.com/robomixes/bitnet-docker.git
 cd bitnet-docker
-```
-
-### Prerequisites
-
-Only one thing needed: **Docker Desktop** installed on your machine.
-
-### Build the Image
-
-```bash
 docker compose build
+docker compose up -d
 ```
 
-This compiles BitNet from source inside the container and bakes in the 2B model. It takes a few minutes on the first build, but you only need to do it once.
+The first build takes ~15-20 minutes (compiles BitNet + downloads the 1.1 GB model). After that, starts instantly.
 
-### Quick Commands
+## Quick Commands
 
 **Start the server:**
 ```bash
@@ -165,13 +38,11 @@ curl http://localhost:8080/health
 
 **Open the web UI:**
 
-Visit `http://localhost:8080` in your browser — it has a built-in chat interface.
+Visit [http://localhost:8080](http://localhost:8080) in your browser — it has a built-in chat interface.
 
 **Send a prompt via API:**
 ```bash
-curl http://localhost:8080/completion \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What is machine learning?", "n_predict": 100}'
+curl http://localhost:8080/completion -H "Content-Type: application/json" -d '{"prompt": "What is machine learning?", "n_predict": 100}'
 ```
 
 **Run CLI mode (one-off prompt):**
@@ -184,57 +55,76 @@ docker compose run --rm bitnet cli -p "Hello, how are you?" -n 100
 docker compose down
 ```
 
-**Export the container for another machine (fully offline):**
+## Take It Anywhere (Fully Offline)
+
+Export the image to a file:
+
 ```bash
 docker save bitnet-llm:2b-4t -o bitnet-portable.tar
 ```
 
-**Load it on another machine:**
+Load it on any other machine with Docker:
+
 ```bash
 docker load -i bitnet-portable.tar
 docker compose up -d
 ```
 
-### Docker Image Details
+No internet required after export.
+
+## Configuration
+
+Adjust settings via environment variables in `docker-compose.yml`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THREADS` | `4` | CPU threads for inference |
+| `CTX_SIZE` | `2048` | Context window size |
+| `N_PREDICT` | `4096` | Max tokens to generate |
+| `TEMPERATURE` | `0.8` | Sampling temperature |
+
+## What's Inside
 
 | Property | Value |
 |----------|-------|
+| Base image | Ubuntu 22.04 |
+| Compiler | Clang 18 (installed during build) |
+| Model | BitNet b1.58-2B-4T (2.4B parameters) |
+| Model format | GGUF (i2_s quantization) |
 | Image size | ~2.4 GB |
-| Compressed size | ~1.06 GB |
-| Base | Ubuntu 22.04 |
-| Model included | BitNet b1.58-2B-4T |
 | Port | 8080 |
 | Inference speed | ~28 tokens/sec |
 
-The container runs entirely on your CPU, requires no GPU, and works fully offline after the initial build.
+## How It Works
 
-## What BitNet Can't Do
+The Dockerfile uses a **multi-stage build**:
 
-It's important to set expectations:
+1. **Builder stage** — Clones BitNet from GitHub, installs Clang 18, generates optimized x86 kernels, compiles the inference engine, and downloads the pre-built GGUF model from HuggingFace
+2. **Runtime stage** — Copies only the compiled binaries and the model into a minimal Ubuntu image (~2.4 GB total)
 
-- **No fine-tuning** — BitNet is inference-only. You can't train or adapt the model to your own data.
-- **No RAG support** — There's no built-in way to feed your documents to the model for context-aware answers.
-- **Limited model selection** — Only two official models are available.
-- **No GPU acceleration** — It's CPU-only by design (GPU/NPU support is on the roadmap).
+The entrypoint supports two modes:
+- `server` (default) — Starts an HTTP server on port 8080 with a web UI
+- `cli` — Runs a single prompt from the command line
 
-If you need any of these features, tools like **Ollama**, **LM Studio**, or **PrivateGPT** are better suited for the job.
+## What is BitNet?
 
-## The Bigger Picture
+BitNet is Microsoft's open-source framework for running **1.58-bit large language models** on standard hardware. Each model weight is either -1, 0, or 1, which dramatically reduces memory and computation:
 
-BitNet isn't trying to be your everyday AI assistant. It's a **proof of concept** that demonstrates 1-bit LLMs are viable. The real impact will come when:
+- **~10x less memory** than standard models of the same size
+- **55-82% less energy** consumption
+- **Fast CPU inference** — no GPU required
+- **100% offline** — no cloud, no API calls, no data leaving your machine
 
-1. Larger 1-bit models are trained (imagine a 70B or 100B parameter model running on a single CPU)
-2. The ecosystem catches up (tools like Ollama and llama.cpp adding native 1-bit support)
-3. Edge deployment becomes mainstream (LLMs running on phones, IoT devices, and embedded systems)
+## Limitations
 
-Microsoft is betting that the future of local AI is ultra-efficient, and BitNet is their first move in that direction.
+- **Inference only** — no fine-tuning or training on your own data
+- **No RAG support** — cannot use your own documents for context
+- **CPU only** — no GPU acceleration (by design)
+- **Small model** — 2B parameters, suitable for basic Q&A and text generation
+- **Limited model selection** — only two official models available (2B and 4B)
 
-## Final Thoughts
+For features like RAG, fine-tuning, or larger models, consider tools like [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), or [PrivateGPT](https://github.com/zylon-ai/private-gpt).
 
-BitNet delivers on its core promise — running an LLM locally with minimal resources and impressive efficiency. The technology is genuinely exciting. However, as a practical tool today, it's limited by the small model sizes and lack of features like RAG or fine-tuning.
+## License
 
-If you're a developer or researcher interested in the future of efficient AI, BitNet is worth experimenting with. If you need a capable local AI assistant right now, look elsewhere — but keep an eye on this project. The 1-bit revolution is just getting started.
-
----
-
-*Tested on Windows 11 with an x86 CPU, Python 3.11, Clang 22.1, and CMake 4.3.*
+BitNet is released under the [MIT License](https://github.com/microsoft/BitNet/blob/main/LICENSE) by Microsoft.
