@@ -1,0 +1,15 @@
+build/
+.git/
+logs/
+models/*/model.safetensors
+models/*/.cache/
+*.exe
+*.dll
+__pycache__/
+*.pyc
+.gitmodules
+media/
+assets/
+docs/
+CODE_OF_CONDUCT.md
+SECURITY.md
