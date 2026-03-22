@@ -16,18 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
-# Copy source code
-COPY 3rdparty/ 3rdparty/
-COPY src/ src/
-COPY include/ include/
-COPY utils/ utils/
-COPY preset_kernels/ preset_kernels/
-COPY gpu/ gpu/
-COPY CMakeLists.txt .
-COPY requirements.txt .
-COPY setup_env.py .
-COPY run_inference.py .
-COPY run_inference_server.py .
+# Clone BitNet and its submodules
+RUN git clone --recursive https://github.com/microsoft/BitNet.git .
 
 # Install gguf Python package (needed for codegen)
 RUN pip3 install --no-cache-dir 3rdparty/llama.cpp/gguf-py
@@ -46,6 +36,16 @@ RUN cmake -B build \
     -DCMAKE_CXX_COMPILER=clang++ \
     && cmake --build build --config Release
 
+# Download the model
+RUN pip3 install --no-cache-dir huggingface_hub && \
+    python3 -c "from huggingface_hub import snapshot_download; snapshot_download('microsoft/BitNet-b1.58-2B-4T', local_dir='models/BitNet-b1.58-2B-4T')"
+
+# Convert model to GGUF format
+RUN python3 -m pip install --no-cache-dir -r requirements.txt && \
+    python3 utils/convert-hf-to-gguf-bitnet.py models/BitNet-b1.58-2B-4T --outtype f32 && \
+    ./build/bin/llama-quantize models/BitNet-b1.58-2B-4T/ggml-model-f32.gguf \
+    models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf I2_S 1
+
 # ============================================
 # Stage 2: Minimal runtime image
 # ============================================
@@ -63,22 +63,22 @@ WORKDIR /app
 
 # Copy compiled binaries from builder
 COPY --from=builder /build/build/bin/ ./build/bin/
-# Copy shared libraries (libllama.so, libggml.so, etc.)
+# Copy shared libraries (libllama.so, libggml.so)
 COPY --from=builder /build/build/3rdparty/llama.cpp/src/libllama.so ./build/bin/
 COPY --from=builder /build/build/3rdparty/llama.cpp/ggml/src/libggml.so ./build/bin/
 
 # Copy Python scripts
-COPY run_inference.py run_inference_server.py ./
+COPY --from=builder /build/run_inference.py /build/run_inference_server.py ./
 
-# Copy the pre-built GGUF model
-COPY models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+# Copy the GGUF model
+COPY --from=builder /build/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
      ./models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set library path in case of shared libs
+# Set library path
 ENV LD_LIBRARY_PATH=/app/build/bin
 ENV MODEL_PATH=/app/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
 
